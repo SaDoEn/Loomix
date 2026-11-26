@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Пошук користувачів</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body { background: #1a1a1a; color: #fff; font-family: sans-serif; margin: 0; padding: 20px 0; }
+        .main-container { width: 90%; max-width: 900px; margin: 0 auto; }
+        .nav { display: flex; justify-content: space-between; align-items: center; background: #2d2d2d; padding: 15px 25px; border-radius: 10px; margin-bottom: 25px; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 25px; }
+        .search-input { flex: 1; padding: 12px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #fff; font-size: 15px; }
+        .search-btn { padding: 12px 24px; background: #00adb5; border: none; color: white; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; }
+        .search-btn:hover { background: #009299; }
+        .user-card { background: #2d2d2d; padding: 16px 20px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #3a3a3a; }
+        .user-card:hover { background: #353535; }
+        .open-btn { background: #00adb5; color: white; padding: 8px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+
+        <div class="nav">
+            <a href="/dashboard" style="color: #00adb5; text-decoration: none; font-weight: bold; font-size: 16px;">⬅ Моє меню</a>
+            <span style="font-size: 20px; font-weight: bold; color: #00adb5;">Результати пошуку</span>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="fullSearchInput" class="search-input" placeholder="Введіть нікнейм..." onkeydown="if(event.key==='Enter') executeFullSearch()">
+            <button onclick="executeFullSearch()" class="search-btn">Шукати</button>
+        </div>
+
+        <h3 id="resultsTitle" style="color: #a0aec0; margin-bottom: 15px;">Знайдені користувачі:</h3>
+        <div id="fullUsersList">
+            <p style="color: #a0aec0;">Завантаження...</p>
+        </div>
+
+    </div>
+
+    <script>
+        function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+        const urlParams = new URLSearchParams(window.location.search);
+        let query = urlParams.get('q') || '';
+
+        if (query) {
+            document.getElementById('fullSearchInput').value = query;
+            fetchUsers(query);
+        } else {
+            document.getElementById('fullUsersList').innerHTML = '<p style="color: #a0aec0;">Введіть запит для пошуку.</p>';
+        }
+
+        function executeFullSearch() {
+            const q = document.getElementById('fullSearchInput').value.trim();
+            if (q) {
+                window.history.pushState({}, '', `/search?q=${encodeURIComponent(q)}`);
+                fetchUsers(q);
+            }
+        }
+
+        async function fetchUsers(searchQuery) {
+            const token = localStorage.getItem('token');
+            const listDiv = document.getElementById('fullUsersList');
+            listDiv.innerHTML = '<p style="color: #a0aec0;">Завантаження...</p>';
+
+            try {
+                const res = await fetch(`/api/v1/users/search?q=${encodeURIComponent(searchQuery)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    const users = await res.json();
+                    listDiv.innerHTML = '';
+
+                    document.getElementById('resultsTitle').innerText = `Знайдено користувачів: ${users.length}`;
+
+                    if (users.length === 0) {
+                        listDiv.innerHTML = '<p style="color: #a0aec0;">Користувачів за таким запитом не знайдено.</p>';
+                        return;
+                    }
+
+                    users.forEach(u => {
+                        listDiv.innerHTML += `
+                            <div class="user-card">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <span style="font-size: 28px;">👤</span>
+                                    <div>
+                                        <div style="font-size: 18px; font-weight: bold; color: #fff;">${esc(u.username)}</div>
+                                        <div style="font-size: 13px; color: #a0aec0; margin-top: 3px;">Підписників: ${u.followers_count || 0}</div>
+                                    </div>
+                                </div>
+                                <a href="/public_profile?id=${u.id}" class="open-btn">Профіль ➔</a>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (err) {
+                console.error('Помилка завантаження результатів:', err);
+            }
+        }
+    </script>
+</body>
+</html>

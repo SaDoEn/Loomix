@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>[project_name] - Особистий профіль</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .nav { display: flex; justify-content: space-between; align-items: center; background: #2d2d2d; padding: 10px 30px; border-radius: 8px; margin-bottom: 30px; }
+        .user-info { font-weight: bold; color: #00adb5; }
+        .logout-btn { background: #ff5252; padding: 8px 16px; font-size: 14px; text-decoration: none; color: white; border-radius: 4px; }
+        .logout-btn:hover { background: #cc3f3f; }
+        .upload-section { background: #2d2d2d; padding: 30px; border-radius: 12px; border: 2px dashed #393e46; margin-top: 20px; }
+
+        .gallery-title { margin-top: 40px; color: #fff; text-align: left; }
+        .posts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 20px; padding-bottom: 30px; }
+        .post-card { background: #2d2d2d; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-align: left; display: flex; flex-direction: column; }
+        .post-card img, .post-card video { width: 100%; height: 200px; object-fit: cover; background: #1a1a1a; }
+        .post-content { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .post-title { font-size: 18px; font-weight: bold; color: #00adb5; margin: 0 0 8px 0; }
+        .post-desc { font-size: 14px; color: #a0aec0; margin: 0; }
+
+        .status-msg { margin-top: 10px; padding: 10px; border-radius: 4px; display: none; font-weight: bold; }
+        .status-success { background: #10b981; color: #fff; }
+
+        .delete-btn {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+            align-self: flex-start;
+        }
+        .delete-btn:hover { background: #cc3f3f; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center;
+            align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background: #1e1e1e; width: 90%; max-width: 1000px; height: 80vh;
+            border-radius: 12px; display: flex; overflow: hidden; position: relative;
+        }
+        .close-btn {
+            position: absolute; top: 15px; right: 20px; color: #fff; font-size: 28px;
+            cursor: pointer; z-index: 1001;
+        }
+
+        .media-viewer-container {
+            flex: 1.5; background: #000; display: flex; align-items: center;
+            justify-content: center; position: relative;
+        }
+        .media-viewer-container img, .media-viewer-container video {
+            max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in;
+        }
+
+        .nav-arrow {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(0,0,0,0.5); color: #fff; border: none;
+            padding: 12px 16px; font-size: 20px; cursor: pointer; border-radius: 50%;
+        }
+        .prev-arrow { left: 15px; }
+        .next-arrow { right: 15px; }
+
+        .sidebar {
+            flex: 1; display: flex; flex-direction: column; border-left: 1px solid #333; padding: 20px;
+        }
+        .author-header { display: flex; align-items: center; gap: 12px; padding-bottom: 15px; border-bottom: 1px solid #333; }
+        .mini-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer; }
+
+        .post-caption { padding: 15px 0; border-bottom: 1px solid #2a2a2a; color: #ddd; font-size: 14px; }
+
+        .comments-section { flex: 1; overflow-y: auto; padding: 15px 0; }
+        .comment-item { margin-bottom: 12px; font-size: 14px; }
+        .comment-user { font-weight: bold; color: #00bcd4; margin-right: 6px; }
+        .comment-delete { margin-left: 10px; background: none; border: none; color: #6b7280; font-size: 12px; cursor: pointer; }
+        .comment-delete:hover { color: #ff5252; }
+
+        .actions-section { border-top: 1px solid #333; padding-top: 15px; }
+        .like-btn {
+            background: none; border: none; color: #fff; font-size: 22px;
+            cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.1s;
+        }
+        .like-btn.liked { color: #ff3040; }
+        .like-btn svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; }
+        .like-btn.liked svg { fill: currentColor; }
+        .like-btn:active { transform: scale(1.2); }
+
+        .add-comment-box { display: flex; gap: 10px; margin-top: 15px; }
+        .add-comment-box input {
+            flex: 1; background: #2a2a2a; border: 1px solid #333; color: #fff;
+            padding: 10px; border-radius: 6px; font-size: 14px;
+        }
+        .add-comment-box button {
+            background: #00bcd4; border: none; color: #fff; padding: 0 15px;
+            border-radius: 6px; font-weight: bold; cursor: pointer;
+        }
+
+        .lightbox-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.95); display: flex; justify-content: center;
+            align-items: center; z-index: 2000; cursor: zoom-out;
+        }
+    </style>
+</head>
+<body>
+    <div style="width: 80%; max-width: 900px; margin: auto; padding: 20px 0;">
+
+        <div class="nav">
+            <span class="brand" style="font-size: 20px; font-weight: bold; color: #00adb5;">[project_name] 📸</span>
+        <div style="position: relative; width: 300px;">
+            <input type="text" id="searchInput" placeholder="🔍 Пошук користувачів..."
+                oninput="handleSearch()"
+                onkeydown="handleSearchKeyDown(event)"
+                   autocomplete="off"
+                style="width: 100%; padding: 8px 12px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; color: #fff; box-sizing: border-box;">
+
+            <div id="searchResults" style="display: none; position: absolute; top: 42px; left: 0; right: 0; background: #2a2a2a; border: 1px solid #334155; border-radius: 6px; z-index: 9999; max-height: 350px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+            </div>
+        </div>
+
+            <div>
+                <span class="user-info" id="welcome-msg">Завантаження...</span>
+                <a href="#" id="logout-link" class="btn logout-btn" style="margin-left: 15px;">Вийти</a>
+            </div>
+        </div>
+
+        <div class="avatar-container" style="text-align: center; margin-bottom: 30px;">
+            <img id="userAvatar" src="https://placehold.co/150x150?text=Ava"
+                style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #00adb5; cursor: pointer;"
+                onclick="document.getElementById('avatarInput').click();" title="Натисни, щоб змінити аватар">
+            <h2 id="myName" style="margin: 10px 0 0 0;"></h2>
+            <p id="myTag" style="color: #a0aec0; margin: 0;"></p>
+
+            <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="uploadAvatar()">
+            <p style="color: #a0aec0; font-size: 14px; margin-top: 5px;">Натисни на коло, щоб змінити аватарку</p>
+        </div>
+
+        <div class="stats-container" style="display: flex; justify-content: center; gap: 20px; margin: 15px 0; color: #fff;">
+            <div class="stat-item" style="cursor: pointer;" onclick="toggleFollowersModal()">
+                <strong id="followers-count">0</strong> Підписників
+            </div>
+            <div class="stat-item" style="cursor: pointer;" onclick="toggleFollowingModal()">
+                <strong id="following-count">0</strong> Підписок
+            </div>
+        </div>
+
+        <div id="users-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000;">
+            <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; width: 300px; color: #fff;">
+                <h3 id="modal-title" style="margin-top: 0; color: #00adb5;">Список</h3>
+                <ul id="users-list" style="list-style: none; padding: 0; max-height: 200px; overflow-y: auto;">
+                </ul>
+                <button onclick="closeModal()" style="background: #ff4d4d; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%;">Закрити</button>
+            </div>
+        </div>
+
+        <div class="container" style="text-align: center; width: 100%; box-sizing: border-box;">
+            <h2>Твій особистий кабінет</h2>
+            <p>Тут відображаються твої завантажені фото та відео &lt;3.</p>
+
+            <div class="upload-section" style="margin-top: 20px; padding: 20px; border: 2px dashed #334155; border-radius: 8px;">
+                <h3 style="color: #06b6d4; text-align: center; margin-top: 0;">Додати нове медіа 📸</h3>
+
+                <form id="uploadForm" onsubmit="uploadMedia(event)">
+                    <div style="margin-bottom: 15px; text-align: left;">
+                        <label style="display: block; margin-bottom: 5px; color: #94a3b8;">Оберіть файл:</label>
+                        <input type="file" id="mediaFile" required style="color: #fff;">
+                    </div>
+
+                    <div style="margin-bottom: 15px; text-align: left;">
+                        <label style="display: block; margin-bottom: 5px; color: #94a3b8;">Назва (Title):</label>
+                        <input type="text" id="mediaTitle" placeholder="Наприклад: жиза" style="width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; border-radius: 4px; color: #fff; box-sizing: border-box;">
+                    </div>
+
+                    <div style="margin-bottom: 15px; text-align: left;">
+                        <label style="display: block; margin-bottom: 5px; color: #94a3b8;">Опис (Description):</label>
+                        <textarea id="mediaDescription" placeholder="Опис вашого поста..." style="width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; border-radius: 4px; color: #fff; resize: vertical; box-sizing: border-box;"></textarea>
+                    </div>
+
+                    <button type="submit" style="width: 100%; padding: 10px; background: #0891b2; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px;">
+                        Опублікувати пост
+                    </button>
+                </form>
+                <div id="statusMessage" class="status-msg status-success">Пост успішно додано! 🚀</div>
+            </div>
+
+            <h3 class="gallery-title">Мої публікації</h3>
+            <div class="posts-grid" id="postsGallery">
+                <p id="no-posts-msg" style="color: #4a5568; grid-column: 1/-1; text-align: center; margin-top: 20px;">У тебе ще немає публікацій. Створи свій перший пост вище!</p>
+            </div>
+        </div>
+
+    </div>
+
+     <div id="mediaModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeMediaModal()">&times;</span>
+
+            <div class="media-viewer-container">
+                <button class="nav-arrow prev-arrow" onclick="navigateMedia(-1)">❮</button>
+                <div id="modalMediaContent" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;"></div>
+                <button class="nav-arrow next-arrow" onclick="navigateMedia(1)">❯</button>
+            </div>
+
+            <div class="sidebar">
+                <div class="author-header">
+                    <img id="modalAuthorAvatar" class="mini-avatar" src="" onclick="openLightbox(this.src)">
+                    <span id="modalAuthorName" style="font-weight: bold;"></span>
+                </div>
+
+                <div id="modalCaption" class="post-caption"></div>
+
+                <div class="comments-section" id="commentsList">
+                </div>
+
+                <div class="actions-section">
+                    <button id="likeBtn" class="like-btn" onclick="toggleLike()">
+                        <svg id="heartIcon" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> <span id="likesCount">0</span>
+                    </button>
+
+                    <div class="add-comment-box">
+                        <input type="text" id="commentInput" placeholder="Додати коментар..." onkeydown="if (event.key === 'Enter') submitComment()">
+                            <button onclick="submitComment()">Надіслати</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lightbox" class="lightbox-modal" style="display: none;" onclick="closeLightbox()">
+        <img id="lightboxImg" src="">
+    </div>
+
+    <script>
+        function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+        let currentUserId = null;
+        let userPosts = [];
+        let currentIndex = 0;
+        let currentUsername = '';
+
+        async function uploadAvatar() {
+            const fileInput = document.getElementById('avatarInput');
+            if (!fileInput.files || fileInput.files.length === 0) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch('/api/v1/media/upload-avatar', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('userAvatar').src = `http://localhost:9000/media/${data.file_url}`;
+                } else {
+                    const errData = await response.json();
+                    alert(`Помилка: ${errData.detail || 'Не вдалося завантажити аватарку'}`);
+                }
+            } catch (err) {
+                console.error("Помилка при завантаженні аватарки:", err);
+            }
+        }
+
+        function openMediaModal(index) {
+            currentIndex = index;
+            const post = userPosts[currentIndex];
+
+            document.getElementById('modalAuthorName').innerText = currentUsername;
+            document.getElementById('modalAuthorAvatar').src = document.getElementById('userAvatar').src;
+            document.getElementById('modalCaption').innerText = post.title + (post.description ? ` — ${post.description}` : '');
+            document.getElementById('commentInput').value = '';
+
+            renderMediaContent(post);
+            loadComments(post.id);
+            document.getElementById('mediaModal').style.display = 'flex';
+        }
+
+        async function toggleLike() {
+            const token = localStorage.getItem('token');
+            const post = userPosts[currentIndex];
+
+            const res = await fetch(`/api/v1/media/${post.id}/like`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                post.is_liked = data.is_liked;
+                post.likes_count = data.likes_count;
+                renderMediaContent(post);
+            }
+        }
+
+                async function loadComments(mediaId) {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/v1/media/${mediaId}/comments`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) return;
+
+            const comments = await res.json();
+            const list = document.getElementById('commentsList');
+            list.innerHTML = '';
+
+            comments.forEach(c => {
+                const row = document.createElement('div');
+                row.className = 'comment-item';
+
+                const user = document.createElement('span');
+                user.className = 'comment-user';
+                user.textContent = c.username + ':';
+
+                const text = document.createElement('span');
+                text.textContent = c.text;
+
+                row.append(user, text);
+
+                if (c.can_delete) {
+                    const del = document.createElement('button');
+                    del.className = 'comment-delete';
+                    del.textContent = 'видалити';
+                    del.onclick = () => deleteComment(c.id);
+                    row.append(del);
+                }
+                list.append(row);
+            });
+        }
+
+        async function deleteComment(commentId) {
+            const token = localStorage.getItem('token');
+            const post = userPosts[currentIndex];
+            const res = await fetch(`/api/v1/media/${post.id}/comments/${commentId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) loadComments(post.id);
+        }
+
+        async function submitComment() {
+            const input = document.getElementById('commentInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const token = localStorage.getItem('token');
+            const post = userPosts[currentIndex];
+
+            const res = await fetch(`/api/v1/media/${post.id}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text })
+            });
+
+            if (res.ok) {
+                input.value = '';
+                loadComments(post.id);
+            }
+        }
+
+        function openLightbox(url) {
+            document.getElementById('lightboxImg').src = url;
+            document.getElementById('lightbox').style.display = 'flex';
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').style.display = 'none';
+        }
+
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/users/me', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('welcome-msg').innerText = `Привіт, ${user.username}!`;
+                    document.getElementById('followers-count').innerText = user.followers_count || 0;
+                    document.getElementById('following-count').innerText = user.following_count || 0;
+                    currentUserId = user.id;
+                    currentUsername = user.username;
+                    document.getElementById('myName').innerText = user.username;
+                    document.getElementById('myTag').innerText = '@' + user.tag;
+
+                    await loadUserPosts();
+                    await loadAvatar();
+                } else {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                }
+            } catch (err) {
+                console.error('Помилка авторизації:', err);
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            }
+        }
+
+        async function toggleFollowersModal() {
+            if (!currentUserId) return;
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch(`/api/v1/subscriptions/subscriptions/${currentUserId}/followers`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const users = await response.json();
+                    showUsersInModal('Підписники', users);
+                }
+            } catch (err) {
+                console.error('Помилка завантаження підписників:', err);
+            }
+        }
+
+        async function toggleFollowingModal() {
+            if (!currentUserId) return;
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch(`/api/v1/subscriptions/subscriptions/${currentUserId}/following`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const users = await response.json();
+                    showUsersInModal('Підписки', users);
+                }
+            } catch (err) {
+                console.error('Помилка завантаження підписок:', err);
+            }
+        }
+
+        function showUsersInModal(title, users) {
+            document.getElementById('modal-title').innerText = title;
+            const list = document.getElementById('users-list');
+            list.innerHTML = '';
+
+            if (users.length === 0) {
+                list.innerHTML = '<li style="color: #a0aec0; padding: 10px 0;">Список порожній</li>';
+            } else {
+                users.forEach(u => {
+                    list.innerHTML += `<li onclick="openUserProfile(${u.id})" style="cursor: pointer; padding: 8px 0; border-bottom: 1px solid #3a3a3a; display: flex; align-items: center; gap: 10px;">
+                        <span>👤</span> <strong>${esc(u.username)}</strong> <span style="color: #a0aec0;">@${esc(u.tag)}</span>
+                    </li>`;
+                });
+            }
+
+            document.getElementById('users-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('users-modal').style.display = 'none';
+        }
+
+        async function loadUserPosts() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/v1/media/my-posts', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const posts = await response.json();
+                    userPosts = posts;
+                    if (posts.length > 0) {
+                        const noPostsMsg = document.getElementById('no-posts-msg');
+                        if (noPostsMsg) noPostsMsg.remove();
+
+                        const gallery = document.getElementById('postsGallery');
+                        gallery.innerHTML = '';
+                        posts.forEach(post => addPostToGallery(post));
+                    }
+                }
+            } catch (err) {
+                console.error('Помилка завантаження публікацій:', err);
+            }
+        }
+
+        async function loadAvatar() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/v1/media/get-avatar', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const avatar = await response.json();
+                    if (avatar && avatar.file_url) {
+                        document.getElementById('userAvatar').src = `http://localhost:9000/media/${avatar.file_url}`;
+                    }
+                }
+            } catch (err) {
+                console.error("Не вдалося завантажити аватарку:", err);
+            }
+        }
+
+        async function uploadMedia(event) {
+            event.preventDefault();
+
+            const token = localStorage.getItem('token');
+            const fileInput = document.getElementById("mediaFile");
+            const titleInput = document.getElementById("mediaTitle");
+            const descriptionInput = document.getElementById("mediaDescription");
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            if (titleInput.value) formData.append("title", titleInput.value);
+            if (descriptionInput.value) formData.append("description", descriptionInput.value);
+
+            try {
+                const response = await fetch("/api/v1/media/upload-post", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${token}` },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const newPost = await response.json();
+
+                    const statusBlock = document.getElementById('statusMessage');
+                    statusBlock.style.display = 'block';
+                    setTimeout(() => { statusBlock.style.display = 'none'; }, 3000);
+
+                    document.getElementById("uploadForm").reset();
+
+                    const noPostsMsg = document.getElementById('no-posts-msg');
+                    if (noPostsMsg) noPostsMsg.remove();
+                    userPosts.unshift(newPost);
+                    addPostToGallery(newPost);
+                    addPostToGallery(newPost);
+                } else {
+                    const errorData = await response.json();
+                    alert("Помилка: " + (errorData.detail || "Не вдалося завантажити"));
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        function addPostToGallery(post) {
+            const gallery = document.getElementById('postsGallery');
+            const postCard = document.createElement('div');
+            postCard.className = 'post-card';
+            postCard.id = `post-${post.id}`;
+
+            const fileUrl = `http://localhost:9000/media/${post.file_url}`;
+
+            let mediaElement = '';
+            if (post.file_type === 'video') {
+                mediaElement = `<video src="${fileUrl}" onclick="openMediaModalById(${post.id})"></video>`;
+            } else {
+                mediaElement = `<img src="${fileUrl}" alt="${esc(post.title || '')}" onclick="openMediaModalById(${post.id})" style="cursor:pointer" onerror="this.src='https://placehold.co/600x400?text=Помилка+завантаження'">`;
+            }
+
+            postCard.innerHTML = `
+                ${mediaElement}
+                <div class="post-content">
+                    <h4 class="post-title">${esc(post.title || 'Без назви')}</h4>
+                    <p class="post-desc">${esc(post.description)}</p>
+                    <button class="delete-btn" onclick="deletePost(${post.id})">Видалити 🗑️</button>
+                </div>
+            `;
+
+            gallery.insertBefore(postCard, gallery.firstChild);
+        }
+        function openMediaModalById(postId) {
+            const index = userPosts.findIndex(p => p.id === postId);
+            openMediaModal(index);
+        }
+        function renderMediaContent(post) {
+            const container = document.getElementById('modalMediaContent');
+            const fullUrl = `http://localhost:9000/media/${post.file_url}`;
+            const isVideo = post.file_url.endsWith('.mp4') || post.file_url.endsWith('.webm');
+
+            if (isVideo) {
+                container.innerHTML = `<video src="${fullUrl}" controls autoplay></video>`;
+                const video = container.querySelector('video');
+                video.volume = parseFloat(localStorage.getItem('videoVolume') ?? 1);
+                video.muted = localStorage.getItem('videoMuted') === 'true';
+                video.addEventListener('volumechange', () => {
+                    localStorage.setItem('videoVolume', video.volume);
+                    localStorage.setItem('videoMuted', video.muted);
+                });
+            } else {
+                container.innerHTML = `<img src="${fullUrl}" onclick="openLightbox('${fullUrl}')">`;
+            }
+
+            document.getElementById('likesCount').innerText = post.likes_count || 0;
+            document.getElementById('likeBtn').classList.toggle('liked', !!post.is_liked);
+        }
+
+        function navigateMedia(dir) {
+            currentIndex += dir;
+            if (currentIndex < 0) currentIndex = userPosts.length - 1;
+            if (currentIndex >= userPosts.length) currentIndex = 0;
+            openMediaModal(currentIndex);
+        }
+
+        function closeMediaModal() {
+            document.getElementById('mediaModal').style.display = 'none';
+            document.getElementById('modalMediaContent').innerHTML = '';
+        }
+
+        async function deletePost(postId) {
+            if (!confirm("Ти впевнений, що хочеш видалити цей post?")) return;
+
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/v1/media/delete-post/${postId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    userPosts = userPosts.filter(p => p.id !== postId);
+                    const postCard = document.getElementById(`post-${postId}`);
+                    if (postCard) postCard.remove();
+
+                    const gallery = document.getElementById('postsGallery');
+                    if (gallery.children.length === 0) {
+                        gallery.innerHTML = `<p id="no-posts-msg" style="color: #4a5568; grid-column: 1/-1; text-align: center; margin-top: 20px;">У тебе ще немає публікацій. Створи свій перший пост вище!</p>`;
+                    }
+                } else {
+                    alert("Не вдалося видалити пост.");
+                }
+            } catch (err) {
+                console.error("Помилка при видаленні:", err);
+            }
+        }
+
+        document.getElementById('logout-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        });
+
+        checkAuth();
+
+        let searchTimeout = null;
+
+        function handleSearch() {
+            clearTimeout(searchTimeout);
+            const query = document.getElementById('searchInput').value.trim();
+            const resultsDiv = document.getElementById('searchResults');
+
+            if (!query.replace(/^@+/, '')) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                const token = localStorage.getItem('token');
+                try {
+                    const response = await fetch(`/api/v1/users/search?q=${encodeURIComponent(query)}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (response.ok) {
+                        const users = await response.json();
+                        resultsDiv.innerHTML = '';
+
+                        if (users.length === 0) {
+                            resultsDiv.innerHTML = '<div style="padding: 12px; color: #a0aec0; font-size: 14px; text-align: center;">Нікого не знайдено</div>';
+                        } else {
+                            const previewUsers = users.slice(0, 5);
+                            previewUsers.forEach(u => {
+                                resultsDiv.innerHTML += `
+                                    <div onclick="openUserProfile(${u.id})" style="padding: 10px 12px; border-bottom: 1px solid #3a3a3a; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #2a2a2a;" onmouseover="this.style.background='#383838'" onmouseout="this.style.background='#2a2a2a'">
+                                        <span style="color: #fff;">👤 <strong>${esc(u.username)}</strong></span>
+                                        <span style="font-size: 12px; color: #00adb5;">Перейти ➔</span>
+                                    </div>
+                                `;
+                            });
+                            if (users.length > 5) {
+                                resultsDiv.innerHTML += `
+                                    <div onclick="goToFullSearch('${encodeURIComponent(query)}')" style="padding: 10px; background: #1e293b; color: #00adb5; font-weight: bold; text-align: center; cursor: pointer; font-size: 13px;" onmouseover="this.style.background='#253346'" onmouseout="this.style.background='#1e293b'">
+                                        Більше користувачів (${users.length}) 🔍
+                                    </div>
+                                `;
+                            }
+                        }
+                        resultsDiv.style.display = 'block';
+                    }
+                } catch (err) {
+                    console.error('Помилка пошуку:', err);
+                }
+            }, 300);
+        }
+
+        function handleSearchKeyDown(event) {
+            if (event.key === 'Enter') {
+                const query = document.getElementById('searchInput').value.trim();
+                if (query.replace(/^@+/, '')) {
+                    goToFullSearch(query);
+                }
+            }
+        }
+
+        function goToFullSearch(query) {
+            window.location.href = `/search?q=${encodeURIComponent(query)}`;
+        }
+
+        function openUserProfile(userId) {
+            window.location.href = `/public_profile?id=${userId}`;
+        }
+
+        document.addEventListener('click', (e) => {
+            const searchInput = document.getElementById('searchInput');
+            const searchResults = document.getElementById('searchResults');
+            if (searchInput && searchResults && !searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.style.display = 'none';
+            }
+        });
+
+        window.addEventListener('pageshow', (e) => {
+        if (e.persisted) location.reload();
+        });
+    </script>
+</body>
+</html>
